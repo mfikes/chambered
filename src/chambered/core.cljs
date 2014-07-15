@@ -113,8 +113,6 @@
 (def texmap (gen-texmap))
 
 (declare render-minecraft!)
-(declare process)
-(declare write-rgb)
 
 (defn clock []
   (render-minecraft! ctx))
@@ -127,6 +125,7 @@
 
 (defn render-minecraft! [ctx]
   (let [pixels (.createImageData ctx w h)
+        data (.-data pixels)
         ds   (date-seed)
         xrot (+ (* (.sin js/Math (* ds twopi)) 0.4) halfpi)
         yrot (* (.cos js/Math (* ds twopi)) 0.4)
@@ -148,77 +147,75 @@
                 yd'   (- (* yd'' ycos) (* zd'' ysin))
                 xd'   (+ (* xd''' xcos) (* zd''' xsin))
                 zd'   (- (* zd''' xcos) (* xd''' xsin))]
-            (loop [d 0 col 0 br 255 ddist 0 closest 32]
-              (if (< d 3)
-                (let [dim-length (cond
-                                   (== d 0) xd'
-                                   (== d 1) yd'
-                                   (== d 2) zd')
-                      ll (/ 1 (if (neg? dim-length) (- dim-length) dim-length))
-                      xd (* xd' ll)
-                      yd (* yd' ll)
-                      zd (* zd' ll)
-                      initial (cond
-                                (== d 0) (- ox (bit-or ox 0))
-                                (== d 1) (- oy (bit-or oy 0))
-                                (== d 2) (- oz (bit-or oz 0)))
-                      initial (if (pos? dim-length) (- 1 initial) initial)
-                      xp (+ ox (* xd initial))
-                      xp (if (and (== d 0) (neg? dim-length)) (dec xp) xp)
-                      yp (+ oy (* yd initial))
-                      yp (if (and (== d 1) (neg? dim-length)) (dec yp) yp)
-                      zp (+ oz (* zd initial))
-                      zp (if (and (== d 2) (neg? dim-length)) (dec zp) zp)
-                      arr (process (.-data pixels) d x y xd yd zd xp yp zp ll initial col br ddist closest)]
-                  (recur (inc d) (aget arr 0) (aget arr 1) (aget arr 2) (aget arr 3)))))))))
+               (loop [d 0 col 0 br 255 ddist 0 closest 32]
+                     (if (< d 3)
+                       (let [dim-length (cond
+                                          (== d 0) xd'
+                                          (== d 1) yd'
+                                          (== d 2) zd')
+                             ll (/ 1 (if (neg? dim-length) (- dim-length) dim-length))
+                             xd (* xd' ll)
+                             yd (* yd' ll)
+                             zd (* zd' ll)
+                             initial (cond
+                                       (== d 0) (- ox (bit-or ox 0))
+                                       (== d 1) (- oy (bit-or oy 0))
+                                       (== d 2) (- oz (bit-or oz 0)))
+                             initial (if (pos? dim-length) (- 1 initial) initial)
+                             xp (+ ox (* xd initial))
+                             xp (if (and (== d 0) (neg? dim-length)) (dec xp) xp)
+                             yp (+ oy (* yd initial))
+                             yp (if (and (== d 1) (neg? dim-length)) (dec yp) yp)
+                             zp (+ oz (* zd initial))
+                             zp (if (and (== d 2) (neg? dim-length)) (dec zp) zp)
+                             arr (loop [xp xp yp yp zp zp
+                                        dist (* ll initial)]
+                                       (if (< dist closest)
+                                         (let [tex (aget blockmap
+                                                         (bit-or
+                                                           (bit-shift-left (bit-and zp 63) 12)
+                                                           (bit-shift-left (bit-and yp 63) 6)
+                                                           (bit-and xp 63)))]
+                                              (if (pos? tex)
+                                                (let [u (if (== d 1)
+                                                          (bit-and (* xp 16) 15)
+                                                          (bit-and (* (+ xp zp) 16) 15))
+                                                      v (if (== d 1)
+                                                          (cond-> (bit-and (* zp 16) 15)
+                                                                  (neg? yd) (+ 32))
+                                                          (+ (bit-and (* yp 16) 15) 16))
+                                                      cc (aget texmap (+ u (* v 16) (* tex 256 3)))
+                                                      mexp (js-mod (+ d 2) 3)]
+                                                     (if (pos? cc)
+                                                       (let [ddist (- 255 (bit-or (* (/ dist 32) 255) 0))
+                                                             br (/ (* 255 (- 255 (* mexp 50))) 255)]
+                                                            (let [r (/ (* (bit-and (bit-shift-right col 16) 0xFF) br ddist) (* 255 255))
+                                                                  g (/ (* (bit-and (bit-shift-right col 8) 0xFF) br ddist) (* 255 255))
+                                                                  b (/ (* (bit-and col 0xFF) br ddist) (* 255 255))
+                                                                  p (* (+ x (* y w)) 4)]
+                                                                 (aset data (+ p 0) r)
+                                                                 (aset data (+ p 1) g)
+                                                                 (aset data (+ p 2) b))
+                                                            (array cc br ddist dist))
+                                                       (recur (+ xp xd)
+                                                              (+ yp yd)
+                                                              (+ zp zd)
+                                                              (+ dist ll))))
+                                                (recur (+ xp xd)
+                                                       (+ yp yd)
+                                                       (+ zp zd)
+                                                       (+ dist ll))))
+                                         (do
+                                           (let [r (/ (* (bit-and (bit-shift-right col 16) 0xFF) br ddist) (* 255 255))
+                                                 g (/ (* (bit-and (bit-shift-right col 8) 0xFF) br ddist) (* 255 255))
+                                                 b (/ (* (bit-and col 0xFF) br ddist) (* 255 255))
+                                                 p (* (+ x (* y w)) 4)]
+                                                (aset data (+ p 0) r)
+                                                (aset data (+ p 1) g)
+                                                (aset data (+ p 2) b))
+                                           (array col br ddist closest))))]
+                            (recur (inc d) (aget arr 0) (aget arr 1) (aget arr 2) (aget arr 3)))))))))
     (.putImageData ctx pixels 0 0)))
 
-(defn process [data d x y xd yd zd xpin ypin zpin ll initial col br ddist closest]
- (loop [xp xpin
-        yp ypin
-        zp zpin
-        dist (* ll initial)]
-   (if (< dist closest)
-     (let [tex (aget blockmap
-                     (bit-or
-                       (bit-shift-left (bit-and zp 63) 12)
-                       (bit-shift-left (bit-and yp 63) 6)
-                       (bit-and xp 63)))]
-       (if (pos? tex)
-         (let [u (if (== d 1)
-                   (bit-and (* xp 16) 15)
-                   (bit-and (* (+ xp zp) 16) 15))
-               v (if (== d 1)
-                   (cond-> (bit-and (* zp 16) 15)
-                           (neg? yd) (+ 32))
-                   (+ (bit-and (* yp 16) 15) 16))
-               cc (aget texmap (+ u (* v 16) (* tex 256 3)))
-               mexp (js-mod (+ d 2) 3)]
-           (if (pos? cc)
-             (let [ddist (- 255 (bit-or (* (/ dist 32) 255) 0))
-                   br (/ (* 255 (- 255 (* mexp 50))) 255)]
-               (write-rgb data x y br ddist cc)
-               (array cc br ddist dist))
-             (recur (+ xp xd)
-                    (+ yp yd)
-                    (+ zp zd)
-                    (+ dist ll))))
-         (recur (+ xp xd)
-                (+ yp yd)
-                (+ zp zd)
-                (+ dist ll))))
-     (do
-       (write-rgb data x y br ddist col)
-       (array col br ddist closest)))))
-	   
-(defn write-rgb [data x y br ddist col]
- (let [r (/ (* (bit-and (bit-shift-right col 16) 0xFF) br ddist) (* 255 255))
-       g (/ (* (bit-and (bit-shift-right col 8) 0xFF) br ddist) (* 255 255))
-       b (/ (* (bit-and col 0xFF) br ddist) (* 255 255))
-       p (* (+ x (* y w)) 4)]
-   (aset data (+ p 0) r)
-   (aset data (+ p 1) g)
-   (aset data (+ p 2) b)))	   
-	   
 (init)
 
