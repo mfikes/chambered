@@ -188,7 +188,8 @@
                                                       mexp (js-mod (+ d 2) 3)]
                                                      (if (pos? cc)
                                                        (let [ddist (- 255 (bit-or (* (/ dist 32) 255) 0))
-                                                             br (/ (* 255 (- 255 (* mexp 50))) 255)]
+                                                             br (/ (* 255 (- 255 (* mexp 50))) 255)
+                                                             col cc]
                                                             (let [r (/ (* (bit-and (bit-shift-right col 16) 0xFF) br ddist) (* 255 255))
                                                                   g (/ (* (bit-and (bit-shift-right col 8) 0xFF) br ddist) (* 255 255))
                                                                   b (/ (* (bit-and col 0xFF) br ddist) (* 255 255))
