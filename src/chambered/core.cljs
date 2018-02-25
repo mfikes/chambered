@@ -2,6 +2,9 @@
   (:use-macros [chambered.macros :only [forloop << >> local]])
   (:require [chambered.util]))
 
+(set! (.. js/document -body -innerHTML)
+      "<canvas id=\"game\" width=\"424\" height=\"240\"></canvas>")
+
 ;; =============================================================================
 ;; Utilities
 
