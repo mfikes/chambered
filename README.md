@@ -8,7 +8,7 @@ Start the browser REPL with
 clj -m cljs.main -re browser -c chambered.core -r
 ```
 
-After the REPL starts, open your browser to
+After the REPL starts, if it doesn't automatically, open your browser to
 
 http://localhost:9000
 
