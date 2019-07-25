@@ -10,6 +10,6 @@ clj -m cljs.main -c chambered.core -r
 
 ## License
 
-Copyright © 2013–2018
+Copyright © 2013–2019
 
 Distributed under the Eclipse Public License, the same as Clojure.
