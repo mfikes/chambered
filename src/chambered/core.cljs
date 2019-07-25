@@ -3,7 +3,7 @@
   (:require [chambered.util]))
 
 (set! (.-innerHTML (.getElementById js/document "app"))
-      "<canvas id=\"game\" width=\"424\" height=\"240\"></canvas>")
+      "<canvas id=\"game\" width=\"600\" height=\"340\"></canvas>")
 
 ;; =============================================================================
 ;; Utilities
@@ -107,8 +107,8 @@
 ;; =============================================================================
 ;; Declarations
 
-(def w (* 212 2))
-(def h (* 120 2))
+(def w (* 300 2))
+(def h (* 170 2))
 (def twopi (* js/Math.PI 2))
 (def halfpi (/ js/Math.PI 2))
 (def ctx (.getContext (.getElementById js/document "game") "2d"))
